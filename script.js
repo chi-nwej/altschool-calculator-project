@@ -1,227 +1,286 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const display = document.getElementById("display-value");
-  const historyList = document.getElementById("history-list");
-  let currentInput = "0";
-  let previousInput = "";
-  let operation = null;
-  let shouldResetDisplay = false;
-  const calculationHistory = [];
+  var displayElement = document.getElementById("display-value");
+  var historyListElement = document.getElementById("history-list");
 
-  // Add event listeners to all buttons
-  document.querySelectorAll(".btn").forEach((button) => {
-    button.addEventListener("click", () => {
-      const action = button.dataset.action;
-      const number = button.dataset.number;
+  // store our calculator state
+  var currentNumber = "0";
+  var previousNumber = "";
+  var currentOperation = null;
+  var needToClearDisplay = false; // Whether to clear the display on next number input
+  var historyArray = []; // store calculation history
 
-      if (number) {
-        inputNumber(number);
-      } else if (action) {
-        switch (action) {
-          case "add":
-          case "subtract":
-          case "multiply":
-          case "divide":
-          case "power":
-            handleOperator(action);
-            break;
-          case "decimal":
-            inputDecimal();
-            break;
-          case "clear":
-            clearCalculator();
-            break;
-          case "calculate":
-            calculate();
-            break;
-          case "percent":
-            handlePercent();
-            break;
-          case "delete":
-            handleDelete();
-            break;
+  // Add click handlers to all the buttons
+  var allButtons = document.querySelectorAll(".btn");
+  for (var i = 0; i < allButtons.length; i++) {
+    allButtons[i].addEventListener("click", function () {
+      var buttonAction = this.dataset.action;
+      var buttonNumber = this.dataset.number;
+
+      // If number
+      if (buttonNumber) {
+        handleNumberInput(buttonNumber);
+      } else if (buttonAction) {
+        // if operation
+        if (buttonAction == "add") {
+          handleOperatorInput("add");
+        } else if (buttonAction == "subtract") {
+          handleOperatorInput("subtract");
+        } else if (buttonAction == "multiply") {
+          handleOperatorInput("multiply");
+        } else if (buttonAction == "divide") {
+          handleOperatorInput("divide");
+        } else if (buttonAction == "power") {
+          handleOperatorInput("power");
+        } else if (buttonAction == "decimal") {
+          handleDecimalInput();
+        } else if (buttonAction == "clear") {
+          clearCalculator();
+        } else if (buttonAction == "calculate") {
+          performCalculation();
+        } else if (buttonAction == "percent") {
+          handlePercentInput();
+        } else if (buttonAction == "delete") {
+          handleBackspaceInput();
         }
       }
-      updateDisplay();
+
+      // Update display
+      updateDisplayValue();
     });
-  });
+  }
 
-  // Add keyboard support
   document.addEventListener("keydown", (event) => {
-    const key = event.key;
+    var keyPressed = event.key;
 
-    if (!isNaN(key) || key === ".") {
-      // Numbers and decimal
-      if (key === ".") {
-        inputDecimal();
-      } else {
-        inputNumber(key);
-      }
-    } else if (["+", "-", "*", "/", "^"].includes(key)) {
-      // Operators
-      const operatorMap = {
-        "+": "add",
-        "-": "subtract",
-        "*": "multiply",
-        "/": "divide",
-        "^": "power",
-      };
-      handleOperator(operatorMap[key]);
-    } else if (key === "%") {
-      handlePercent();
-    } else if (key === "Enter" || key === "=") {
-      calculate();
-    } else if (key === "Escape") {
+    if (keyPressed >= "0" && keyPressed <= "9") {
+      handleNumberInput(keyPressed);
+    }
+    // Handle decimal point
+    else if (keyPressed == ".") {
+      handleDecimalInput();
+    }
+    // Handle operators
+    else if (keyPressed == "+") {
+      handleOperatorInput("add");
+    } else if (keyPressed == "-") {
+      handleOperatorInput("subtract");
+    } else if (keyPressed == "*") {
+      handleOperatorInput("multiply");
+    } else if (keyPressed == "/") {
+      handleOperatorInput("divide");
+    } else if (keyPressed == "^") {
+      handleOperatorInput("power");
+    }
+    // Handle equals/enter
+    else if (keyPressed == "Enter" || keyPressed == "=") {
+      performCalculation();
+    }
+    // Handle escape (clear)
+    else if (keyPressed == "Escape") {
       clearCalculator();
-    } else if (key === "Backspace") {
-      handleDelete();
+    }
+    // Handle backspace
+    else if (keyPressed == "Backspace") {
+      handleBackspaceInput();
+    }
+    // Handle percent
+    else if (keyPressed == "%") {
+      handlePercentInput();
     }
 
-    updateDisplay();
+    // Update the display
+    updateDisplayValue();
   });
 
-  function inputNumber(number) {
-    if (shouldResetDisplay) {
-      currentInput = number;
-      shouldResetDisplay = false;
+  // Function to handle when a number button is pressed
+  function handleNumberInput(number) {
+    // If we need to clear the display first
+    if (needToClearDisplay == true) {
+      currentNumber = number;
+      needToClearDisplay = false;
     } else {
-      currentInput = currentInput === "0" ? number : currentInput + number;
+      // If the display shows 0, replace it, otherwise add to it
+      if (currentNumber == "0") {
+        currentNumber = number;
+      } else {
+        currentNumber = currentNumber + number;
+      }
     }
   }
 
-  function inputDecimal() {
-    if (shouldResetDisplay) {
-      currentInput = "0.";
-      shouldResetDisplay = false;
+  // Function to handle decimal point button
+  function handleDecimalInput() {
+    // If we need to clear the display first
+    if (needToClearDisplay == true) {
+      currentNumber = "0.";
+      needToClearDisplay = false;
       return;
     }
 
-    if (!currentInput.includes(".")) {
-      currentInput += ".";
+    // Only add decimal if there isn't one already
+    if (currentNumber.indexOf(".") == -1) {
+      currentNumber = currentNumber + ".";
     }
   }
 
-  function handleOperator(op) {
-    if (previousInput === "" || operation === null) {
-      previousInput = currentInput;
-    } else if (!shouldResetDisplay) {
-      previousInput = calculate(false);
+  // Function to handle operator buttons (+, -, *, /)
+  function handleOperatorInput(operator) {
+    // If this is the first number in the calculation
+    if (previousNumber == "" || currentOperation == null) {
+      previousNumber = currentNumber;
+    }
+    // If we already have a first number and an operation
+    else if (needToClearDisplay == false) {
+      // Calculate the result so far
+      var result = performCalculation(false);
+      previousNumber = result;
     }
 
-    operation = op;
-    shouldResetDisplay = true;
+    // Set the current operation and prepare for next number
+    currentOperation = operator;
+    needToClearDisplay = true;
   }
 
-  function calculate(updateDisplay = true) {
-    const prev = Number.parseFloat(previousInput);
-    const current = Number.parseFloat(currentInput);
-
-    if (isNaN(prev) || isNaN(current)) return;
-
-    let result;
-    let operationSymbol;
-
-    switch (operation) {
-      case "add":
-        result = prev + current;
-        operationSymbol = "+";
-        break;
-      case "subtract":
-        result = prev - current;
-        operationSymbol = "−";
-        break;
-      case "multiply":
-        result = prev * current;
-        operationSymbol = "×";
-        break;
-      case "divide":
-        if (current === 0) {
-          result = "Error";
-          operationSymbol = "÷";
-        } else {
-          result = prev / current;
-          operationSymbol = "÷";
-        }
-        break;
-      case "power":
-        result = Math.pow(prev, current);
-        operationSymbol = "^";
-        break;
-      default:
-        return currentInput;
+  // Function to perform the calculation
+  function performCalculation(updateDisplay) {
+    // Default parameter value
+    if (updateDisplay === undefined) {
+      updateDisplay = true;
     }
 
-    if (result === "Error") {
+    // Convert string numbers to actual numbers
+    var firstNumber = Number.parseFloat(previousNumber);
+    var secondNumber = Number.parseFloat(currentNumber);
+
+    // Check if we have valid numbers
+    if (isNaN(firstNumber) || isNaN(secondNumber)) {
+      return;
+    }
+
+    var calculationResult;
+    var operationSymbol;
+
+    // Perform the right operation based on what button was pressed
+    if (currentOperation == "add") {
+      calculationResult = firstNumber + secondNumber;
+      operationSymbol = "+";
+    } else if (currentOperation == "subtract") {
+      calculationResult = firstNumber - secondNumber;
+      operationSymbol = "−";
+    } else if (currentOperation == "multiply") {
+      calculationResult = firstNumber * secondNumber;
+      operationSymbol = "×";
+    } else if (currentOperation == "divide") {
+      // Check for division by zero
+      if (secondNumber == 0) {
+        calculationResult = "Error";
+        operationSymbol = "÷";
+      } else {
+        calculationResult = firstNumber / secondNumber;
+        operationSymbol = "÷";
+      }
+    } else if (currentOperation == "power") {
+      calculationResult = Math.pow(firstNumber, secondNumber);
+      operationSymbol = "^";
+    } else {
+      return currentNumber;
+    }
+
+    // division by zero error handling
+    if (calculationResult == "Error") {
       clearCalculator();
-      currentInput = "Error";
+      currentNumber = "Error";
       return "Error";
     }
 
-    // Format the result to avoid extremely long decimals
-    result = Number.parseFloat(result.toFixed(10));
+    // Round the result to avoid very long decimals
+    calculationResult = Number.parseFloat(calculationResult.toFixed(10));
 
-    if (updateDisplay) {
-      // Add to history
-      const historyItem = {
-        expression: `${prev} ${operationSymbol} ${current}`,
-        result: result,
+    // If = was pressed
+    if (updateDisplay == true) {
+      // Add this calculation to the history
+      var historyItem = {
+        expression: firstNumber + " " + operationSymbol + " " + secondNumber,
+        result: calculationResult,
       };
-      calculationHistory.push(historyItem);
-      updateHistory();
+      historyArray.push(historyItem);
+      updateHistoryDisplay();
 
-      operation = null;
-      previousInput = "";
-      currentInput = result.toString();
-      shouldResetDisplay = true;
+      // Reset
+      currentOperation = null;
+      previousNumber = "";
+      currentNumber = calculationResult.toString();
+      needToClearDisplay = true;
     }
 
-    return result.toString();
+    return calculationResult.toString();
   }
 
-  function handlePercent() {
-    const current = Number.parseFloat(currentInput);
-    currentInput = (current / 100).toString();
+  // Function to handle percent button
+  function handlePercentInput() {
+    var number = Number.parseFloat(currentNumber);
+    currentNumber = (number / 100).toString();
   }
 
-  function handleDelete() {
-    if (currentInput.length === 1 || currentInput === "Error") {
-      currentInput = "0";
+  // Function to handle backspace button
+  function handleBackspaceInput() {
+    // If there's only one digit or there's an error
+    if (currentNumber.length == 1 || currentNumber == "Error") {
+      currentNumber = "0";
     } else {
-      currentInput = currentInput.slice(0, -1);
+      // Remove the last character
+      currentNumber = currentNumber.substring(0, currentNumber.length - 1);
     }
   }
 
+  // Function to clear the calculator
   function clearCalculator() {
-    currentInput = "0";
-    previousInput = "";
-    operation = null;
-    shouldResetDisplay = false;
+    currentNumber = "0";
+    previousNumber = "";
+    currentOperation = null;
+    needToClearDisplay = false;
   }
 
-  function updateDisplay() {
-    display.textContent = currentInput;
+  // Function to update what's shown on the calculator display
+  function updateDisplayValue() {
+    displayElement.textContent = currentNumber;
   }
 
-  function updateHistory() {
-    historyList.innerHTML = "";
+  // Function to update the history section
+  function updateHistoryDisplay() {
+    // Clear the current history display
+    historyListElement.innerHTML = "";
 
-    // Show only the last 5 calculations
-    const recentHistory = calculationHistory.slice(-5);
+    // Get only the last 5 calculations
+    var startIndex = 0;
+    if (historyArray.length > 5) {
+      startIndex = historyArray.length - 5;
+    }
 
-    recentHistory.forEach((item) => {
-      const historyItem = document.createElement("div");
-      historyItem.className = "history-item";
+    // Add each history item to the display
+    for (var i = startIndex; i < historyArray.length; i++) {
+      var item = historyArray[i];
 
-      const expression = document.createElement("span");
-      expression.className = "history-expression";
-      expression.textContent = item.expression;
+      // Create a div for this history item
+      var historyItemDiv = document.createElement("div");
+      historyItemDiv.className = "history-item";
 
-      const result = document.createElement("span");
-      result.className = "history-result";
-      result.textContent = "= " + item.result;
+      // Create a span for the expression
+      var expressionSpan = document.createElement("span");
+      expressionSpan.className = "history-expression";
+      expressionSpan.textContent = item.expression;
 
-      historyItem.appendChild(expression);
-      historyItem.appendChild(result);
-      historyList.appendChild(historyItem);
-    });
+      // Create a span for the result
+      var resultSpan = document.createElement("span");
+      resultSpan.className = "history-result";
+      resultSpan.textContent = "= " + item.result;
+
+      // Add the spans to the div
+      historyItemDiv.appendChild(expressionSpan);
+      historyItemDiv.appendChild(resultSpan);
+
+      // Add the div to the history list
+      historyListElement.appendChild(historyItemDiv);
+    }
   }
 });
