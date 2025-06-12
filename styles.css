@@ -18,7 +18,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  max-width: 320px;
+  max-width: 400px;
   width: 100%;
 }
 
@@ -54,16 +54,13 @@ body {
 
 .buttons {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-gap: 12px;
+  grid-template-columns: repeat(5, 1fr);
+  grid-gap: 5px;
 }
 
 .btn {
   border: none;
-  border-radius: 50%;
-  width: 55px;
-  height: 55px;
-  font-size: 20px;
+  font-size: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -73,17 +70,25 @@ body {
 
 .number,
 .decimal,
-.clear,
 .backspace {
   background-color: #404258;
   color: white;
+  width: 65px;
+  height: 45px;
+  border-radius: 35px;
 }
 
 .operator {
   background-color: #f49d1a;
   color: white;
+  width: 55px;
+  height: 50px;
+  border-radius: 50%;
 }
 
+.right {
+  margin-right: 15px;
+}
 .equals {
   background-color: #b2b2b2;
   color: #242530;
